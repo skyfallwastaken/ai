@@ -15,45 +15,28 @@
     { key: "python", label: "Python" },
   ] as const;
 
+  const cell = "px-4 py-3 text-sm";
+
+  const explainer = [
+    { title: "Send a state", body: "The thing to judge: a support message, a JSON record, a chat log. Clef can also take images." },
+    { title: "Ask questions", body: "Yes/no, pick-one, or rate-on-a-scale, each with the options you allow." },
+    { title: "Get probabilities", body: "A typed answer per question with a probability for each option. Act when it's confident; hand off to a person when it isn't." },
+  ];
+
+  const models = $derived([
+    { id: "jev-latest", by: "TypeSafe", notes: "Text only", price: data.inputPricePerMillionUsd },
+    { id: "clef", by: "Cloudflare", notes: "Most accurate; also reads images", price: data.clefPrices.clef },
+    { id: "clef-flash", by: "Cloudflare", notes: "Fastest; also reads images", price: data.clefPrices["clef-flash"] },
+  ]);
+
   const questionTypes = [
-    {
-      type: "noul",
-      title: "Is this true?",
-      body: "A yes/no question. Returns one number from 0 to 1: the probability the statement holds for the state. The number is the confidence; there is no separate field.",
-      criteria: "Instructions only.",
-      example: "\"Does this convey urgency?\"",
-    },
-    {
-      type: "choice",
-      title: "Which one?",
-      body: "Picks one option from a set you define, up to 255. Returns the chosen key, a probability for every option, and an overall confidence.",
-      criteria: "A map of option key to description. Include an \"other\" option so the model can say nothing fits.",
-      example: "\"Which team should handle this?\"",
-    },
-    {
-      type: "score",
-      title: "How much?",
-      body: "Places the state on an ordered scale. Returns a score that can land between levels (for example 1.4), plus probabilities and confidence.",
-      criteria: "An ordered list of 2 to 10 level descriptions. Level 0 is the first entry.",
-      example: "\"How frustrated does the customer sound?\"",
-    },
+    { type: "noul", asks: "Is this true?", criteria: "Optional", returns: "Probability of yes, 0 to 1" },
+    { type: "choice", asks: "Which one?", criteria: "Option → description, up to 255. Add an \"other\".", returns: "Chosen option, each option's probability" },
+    { type: "score", asks: "How much?", criteria: "2 to 10 levels, lowest first", returns: "Score (can land between levels), each level's probability" },
   ];
 
-  const goodFor = [
-    "Routing and triage: which queue, team, or workflow a record belongs to",
-    "Classification and tagging over tickets, messages, documents or events",
-    "Guardrails: does this input break a rule, is this action safe to automate",
-    "Severity, tone, or quality scoring at high volume",
-    "Any decision your code can act on directly, with a confidence threshold for escalation",
-  ];
-
-  const notFor = [
-    "Writing anything: it cannot return a value outside your question schema",
-    "Chat, summaries, or explanations of its reasoning",
-    "Arithmetic and counting: error grows with the size of what is counted",
-    "Comparing dates: dates are text to it, not ordered quantities",
-    "Decisions that need a written justification for a human reviewer",
-  ];
+  const goodFor = ["Routing and triage", "Classifying and tagging", "Guardrails: is this safe to automate?", "Scoring severity, tone or quality"];
+  const notFor = ["Writing text, chat or explanations", "Counting, arithmetic or comparing dates", "Decisions that need a written justification"];
 </script>
 
 <svelte:head><title>Jev</title></svelte:head>
@@ -61,7 +44,7 @@
 <div class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
   <PageHeader
     title="Jev"
-    description="An ultra-fast model that makes decisions instead of writing text"
+    description="Decision models: send text and typed questions, get a probability for every answer"
   >
     {#snippet actions()}
       <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Beta</span>
@@ -72,43 +55,83 @@
     {/snippet}
   </PageHeader>
 
-  <section class="mt-10" aria-labelledby="what-heading">
-    <h2 id="what-heading" class="mb-4 text-sm font-medium">What's Jev?</h2>
-    <div class="bg-card space-y-3 rounded-lg border p-4 text-sm text-pretty">
-      <p>
-        Jev is the first of what TypeSafe calls <strong>System One models</strong>, released in September 2026. A chat model generates a reply one token at a time and you parse the result. Jev does not generate text at all. It reads your <strong>state</strong> (e.g. support messages, JSON records) and a map of <strong>questions</strong>, and returns a typed answer to every question in a single parallel pass.
-      </p>
-      <p>
-        Because the answers are drawn from a schema you define, Jev cannot invent an option that does not exist or return something your code cannot handle. Every answer carries a probability, so your software can act when confidence is high and hand off to a person when it is not.
-      </p>
+  <section class="mt-10" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="mb-4 text-sm font-medium">How it works</h2>
+    <ol role="list" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {#each explainer as step, index (step.title)}
+        <li class="bg-card rounded-lg border p-4">
+          <p class="text-muted-foreground text-xs tabular-nums">{index + 1}</p>
+          <p class="mt-1 text-sm font-medium">{step.title}</p>
+          <p class="text-muted-foreground mt-1 text-sm text-pretty">{step.body}</p>
+        </li>
+      {/each}
+    </ol>
+    <p class="text-muted-foreground mt-3 text-sm text-pretty">
+      Unlike a chat model, it never writes text, so there's nothing to parse and it can't answer outside your options. It answers every question at once, in milliseconds.
+    </p>
+  </section>
+
+  <section class="mt-10" aria-labelledby="models-heading">
+    <h2 id="models-heading" class="mb-4 text-sm font-medium">Models</h2>
+    <div class="overflow-x-auto rounded-lg border">
+      <table class="w-full border-collapse text-left">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="{cell} font-medium">Model</th>
+            <th class="{cell} font-medium">By</th>
+            <th class="{cell} font-medium">Notes</th>
+            <th class="{cell} text-right font-medium">Per 1M input tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each models as model (model.id)}
+            <tr class="border-b last:border-0">
+              <td class="{cell} font-mono">{model.id}</td>
+              <td class="{cell}">{model.by}</td>
+              <td class="{cell} text-muted-foreground">{model.notes}</td>
+              <td class="{cell} text-right tabular-nums">${model.price}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     </div>
+    <p class="text-muted-foreground mt-2 text-xs">Output is free. Usage counts against your daily allowance.</p>
   </section>
 
   <section class="mt-10" aria-labelledby="questions-heading">
     <h2 id="questions-heading" class="mb-4 text-sm font-medium">Question types</h2>
-    <ul role="list" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {#each questionTypes as item (item.type)}
-        <li class="bg-card flex flex-col gap-2 rounded-lg border p-4">
-          <div class="flex items-baseline justify-between gap-2">
-            <p class="font-mono text-sm font-medium">{item.type}</p>
-            <p class="text-muted-foreground text-xs">{item.title}</p>
-          </div>
-          <p class="text-sm text-pretty">{item.body}</p>
-          <p class="text-muted-foreground text-xs text-pretty"><span class="font-medium">Criteria:</span> {item.criteria}</p>
-          <p class="text-muted-foreground mt-auto pt-1 text-xs italic">{item.example}</p>
-        </li>
-      {/each}
-    </ul>
+    <div class="overflow-x-auto rounded-lg border">
+      <table class="w-full border-collapse text-left">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="{cell} font-medium">Type</th>
+            <th class="{cell} font-medium">Asks</th>
+            <th class="{cell} font-medium">Criteria</th>
+            <th class="{cell} font-medium">Returns</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each questionTypes as item (item.type)}
+            <tr class="border-b last:border-0">
+              <td class="{cell} font-mono">{item.type}</td>
+              <td class="{cell}">{item.asks}</td>
+              <td class="{cell} text-muted-foreground">{item.criteria}</td>
+              <td class="{cell} text-muted-foreground">{item.returns}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section class="mt-10" aria-labelledby="fit-heading">
-    <h2 id="fit-heading" class="mb-4 text-sm font-medium">When to reach for it</h2>
+    <h2 id="fit-heading" class="sr-only">When to use it</h2>
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="bg-card rounded-lg border p-4">
         <p class="mb-2 text-sm font-medium">Good for</p>
         <ul role="list" class="space-y-1.5 text-sm">
           {#each goodFor as item (item)}
-            <li class="flex gap-2 text-pretty"><CheckIcon class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" /><span>{item}</span></li>
+            <li class="flex gap-2"><CheckIcon class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" /><span>{item}</span></li>
           {/each}
         </ul>
       </div>
@@ -116,7 +139,7 @@
         <p class="mb-2 text-sm font-medium">Not for</p>
         <ul role="list" class="space-y-1.5 text-sm">
           {#each notFor as item (item)}
-            <li class="flex gap-2 text-pretty"><CloseIcon class="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" /><span>{item}</span></li>
+            <li class="flex gap-2"><CloseIcon class="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" /><span>{item}</span></li>
           {/each}
         </ul>
       </div>
@@ -134,23 +157,9 @@
         <dt class="text-muted-foreground text-xs">Routes</dt>
         <dd class="mt-1 font-mono text-sm">POST /systemone · GET /models</dd>
       </div>
-      <div>
-        <dt class="text-muted-foreground text-xs">Model</dt>
-        <dd class="mt-1 font-mono text-sm">jev-latest</dd>
-      </div>
-      <div>
-        <dt class="text-muted-foreground text-xs">Pricing</dt>
-        <dd class="mt-1 text-sm tabular-nums">
-          ${data.inputPricePerMillionUsd} per 1M input tokens
-          <span class="text-muted-foreground">· output free</span>
-        </dd>
-        <dd class="text-muted-foreground mt-0.5 text-xs">Counts against your daily allowance</dd>
-      </div>
       <div class="sm:col-span-2">
-        <dt class="text-muted-foreground text-xs">SDK</dt>
-        <dd class="text-muted-foreground mt-1 text-sm text-pretty">
-          TypeSafe's own clients work unchanged: point the base URL at the address above and use your Hack Club AI key. <code class="font-mono text-xs">/v1/systemone</code> and <code class="font-mono text-xs">/v1/models</code> are served too.
-        </dd>
+        <dt class="text-muted-foreground text-xs">SDKs</dt>
+        <dd class="mt-1 text-sm">TypeSafe's SDKs work with this base URL and your Hack Club AI key.</dd>
       </div>
     </dl>
   </section>

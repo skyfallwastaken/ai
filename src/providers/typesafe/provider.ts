@@ -1,49 +1,44 @@
-import { Usd } from "../../billing/money";
+import type { Usd } from "../../billing/money";
 import type { ProviderModule } from "../provider";
-import { nonNegativeInteger } from "../values";
+import type { SystemOneBackend, SystemOneModel } from "../systemone";
 
 export const TYPESAFE = "typesafe";
 
 export const DEFAULT_JEV_MODEL = "jev-latest";
-const TOKENS_PER_PRICE_UNIT = 1_000_000n;
 /**
  * The configured input price is Jev's. Any other model TypeSafe might serve
  * is priced differently, so only the Jev family is forwarded.
  */
 export const JEV_MODEL = /^jev(-[a-z0-9.]+)?$/i;
 
-/** `usage.input_tokens` / `usage.output_tokens` from a systemone response, or null when absent. */
-export const jevTokens = (body: unknown): { inputTokens: number; outputTokens: number } | null => {
-  if (body === null || typeof body !== "object") return null;
-  const usage = (body as { usage?: unknown }).usage;
-  if (usage === null || typeof usage !== "object") return null;
-  const { input_tokens, output_tokens } = usage as { input_tokens?: unknown; output_tokens?: unknown };
-  const inputTokens = nonNegativeInteger(input_tokens);
-  if (inputTokens === null) return null;
-  return { inputTokens, outputTokens: nonNegativeInteger(output_tokens) ?? 0 };
-};
-
-/** Input tokens priced at `pricePerMillion`; output tokens are free. Null without usage. */
-export const jevCost = (body: unknown, pricePerMillion: Usd): Usd | null => {
-  const tokens = jevTokens(body);
-  if (!tokens) return null;
-  return Usd.fromAtoms((pricePerMillion.toAtoms() * BigInt(tokens.inputTokens)) / TOKENS_PER_PRICE_UNIT);
-};
-
-/** `jev/<model>`, preferring the versioned id the response reports over the alias requested. */
-export const jevModelLabel = (model: unknown, fallback: unknown = DEFAULT_JEV_MODEL) => {
-  const chosen = typeof model === "string" && model ? model : fallback;
-  return `jev/${typeof chosen === "string" && chosen ? chosen : DEFAULT_JEV_MODEL}`;
-};
-
-/** The `model` a raw systemone response reports, or null. */
-export const jevResponseModel = (raw: string): string | null => {
-  try {
-    const model = (JSON.parse(raw) as { model?: unknown })?.model;
-    return typeof model === "string" && model ? model : null;
-  } catch {
-    return null;
-  }
+/** TypeSafe's Jev. Requests and responses are already System One. */
+export const typesafeSystemOne = (options: {
+  apiKey: string;
+  inputPricePerMillion: Usd;
+  baseUrl?: string;
+}): SystemOneBackend => {
+  const baseUrl = (options.baseUrl ?? "https://api.typesafe.ai").replace(/\/$/, "");
+  const authorization = `Bearer ${options.apiKey}`;
+  return {
+    provider: TYPESAFE,
+    // `jev/jev-1.13.0`: a success is labelled with the versioned id it reports.
+    labelPrefix: "jev",
+    resolve: (requested) => (JEV_MODEL.test(requested) ? requested : null),
+    inputPricePerMillion: () => options.inputPricePerMillion,
+    send: (fetch, _model, body) =>
+      fetch(`${baseUrl}/v1/systemone`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization },
+        body,
+      }),
+    listModels: async (fetch, signal) => {
+      const response = await fetch(`${baseUrl}/v1/models`, { headers: { authorization }, signal });
+      if (!response.ok) throw new Error(`TypeSafe GET /v1/models returned HTTP ${response.status}`);
+      const { models } = (await response.json()) as { models?: unknown };
+      if (!Array.isArray(models)) throw new Error("TypeSafe GET /v1/models returned no models array");
+      return models as SystemOneModel[];
+    },
+  };
 };
 
 /**

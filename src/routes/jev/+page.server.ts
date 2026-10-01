@@ -120,5 +120,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     examples,
     response,
     inputPricePerMillionUsd: site.jevInputPricePerMillionUsd,
+    clefPrices: site.clefInputPricesPerMillionUsd,
   };
 };
