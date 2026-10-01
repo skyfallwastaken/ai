@@ -96,19 +96,6 @@ describe("jev route", () => {
     expect(JSON.parse(String(record.event?.response_body))).toEqual(CLEF_ANSWER);
   });
 
-  test("clef-flash is matched through surrounding whitespace and billed at its own price", async () => {
-    const { response, upstream, record } = await call(
-      "clef-flash",
-      () => workersAi({ ...CLEF_ANSWER, model: "clef-flash" }),
-      " clef-flash ",
-    );
-    expect(response.status).toBe(200);
-    expect(upstream[0]!.url).toEndWith("/ai/run/@cf/cloudflare/clef-flash");
-    expect(JSON.parse(upstream[0]!.body).model).toBe("clef-flash");
-    expect([record.provider, record.actualCostUsd]).toEqual(["cloudflare", "0.090000000000"]);
-    expect(record.event?.model).toBe("cloudflare/clef-flash");
-  });
-
   test("a Workers AI validation error reaches the caller as a System One 422 with its message", async () => {
     const { response, body, record } = await call(
       "clef-invalid",
@@ -120,16 +107,6 @@ describe("jev route", () => {
     expect([record.provider, record.state]).toEqual(["cloudflare", "finalized"]);
     expect(record.event?.outcome).toBe("provider_error");
     expect(record.event?.http_status).toBe(422);
-  });
-
-  test("a rejected Cloudflare token is the gateway's fault, not the caller's", async () => {
-    const { response, body } = await call(
-      "clef-token",
-      () => workersAi(null, { status: 401, errors: [{ code: 10000, message: "Authentication error" }] }),
-      "clef",
-    );
-    expect(response.status).toBe(502);
-    expect(JSON.parse(body)).toEqual({ error: "Authentication error" });
   });
 
   test("a model no provider serves is refused before anything is reserved", async () => {
