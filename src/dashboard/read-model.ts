@@ -8,6 +8,7 @@ import type { IpNetworkTable } from "./ip-network";
 // The one lib/ import: the dashboard's model type. Catalog unification removes it.
 import { type CatalogModel, type ModelCardData, modelTypeOf, stripMarkdownLinks } from "../lib/format";
 import type { ModelCatalog } from "../models/catalog";
+import { CLEF_MODELS } from "../providers/cloudflare/provider";
 import type { ReplicateCatalog, ReplicateCover } from "../providers/replicate/catalog";
 
 export type DashboardEnv = Pick<
@@ -34,6 +35,8 @@ export type Site = {
   featuredModel: string;
   ocrPagePriceUsd: string;
   jevInputPricePerMillionUsd: string;
+  /** Clef model id → USD per million input tokens. */
+  clefInputPricesPerMillionUsd: Record<string, string>;
 };
 
 export type DailySpending = {
@@ -194,6 +197,7 @@ export const parseActivityFilters = (params: URLSearchParams): ActivityFilters =
 /** Models served by other providers have their own dashboard page. */
 const PROVIDER_PAGES: Record<string, string> = {
   typesafe: "/jev",
+  cloudflare: "/jev",
   mistral: "/ocr",
   exa: "/exa",
   replicate: "/replicate",
@@ -252,6 +256,9 @@ export class DashboardReadModel {
       featuredModel: featuredModel(env.featuredModels),
       ocrPagePriceUsd: env.mistralOcrPagePriceUsd,
       jevInputPricePerMillionUsd: env.typesafeInputPricePerMillionUsd,
+      clefInputPricesPerMillionUsd: Object.fromEntries(
+        Object.entries(CLEF_MODELS).map(([model, { inputPricePerMillionUsd }]) => [model, inputPricePerMillionUsd]),
+      ),
     };
   }
 

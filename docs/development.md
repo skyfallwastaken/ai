@@ -14,7 +14,8 @@ Sign in through Hack Club OAuth. Every provider is always mounted, so the
 server refuses to start unless all of their keys are set:
 `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `HACK_CLUB_CLIENT_ID`,
 `HACK_CLUB_CLIENT_SECRET`, `OPENAI_MODERATION_API_KEY`, `MISTRAL_API_KEY`,
-`EXA_API_KEY` and `REPLICATE_API_KEY`. It also needs `DATABASE_URL`; see
+`EXA_API_KEY`, `REPLICATE_API_KEY`, `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN`. It also needs `DATABASE_URL`; see
 `.env.example` for the optional settings.
 
 On startup the server creates the Graphile Worker schema, starts the

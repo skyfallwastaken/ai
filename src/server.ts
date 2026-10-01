@@ -27,6 +27,7 @@ import { webhookRoutes } from "./gateway/webhooks";
 import { log } from "./log";
 import { pendingPostgresMigrations } from "./migrations";
 import { ModelCatalog } from "./models/catalog";
+import { cloudflareProvider } from "./providers/cloudflare/provider";
 import { exaProvider } from "./providers/exa/provider";
 import { mistralProvider } from "./providers/mistral/provider";
 import { OpenRouterAdapter } from "./providers/openrouter/adapter";
@@ -108,6 +109,7 @@ export const createBackend = (env: Env): Backend => {
     exaProvider,
     mistralProvider,
     typesafeProvider,
+    cloudflareProvider,
   ]);
   const replicateCatalog = createReplicateCatalog({
     apiKey: env.replicateApiKey,
@@ -129,6 +131,8 @@ export const createBackend = (env: Env): Backend => {
       ...metered,
       typesafeApiKey: env.typesafeApiKey,
       inputPricePerMillionTokensUsd: env.typesafeInputPricePerMillionUsd,
+      cloudflareAccountId: env.cloudflareAccountId,
+      cloudflareApiToken: env.cloudflareApiToken,
     }),
     moderationRoutes({
       ...metered,

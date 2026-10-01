@@ -49,6 +49,9 @@ export type Env = {
   typesafeApiKey: string;
   /** Jev price per million input tokens in USD; TypeSafe reports no cost. Output is free. */
   typesafeInputPricePerMillionUsd: string;
+  /** Workers AI account and token (Workers AI Read) for Cloudflare's Clef models. */
+  cloudflareAccountId: string;
+  cloudflareApiToken: string;
   allowedImageModels: string[];
   /**
    * Output tokens reserved when a model exposes no maximum completion length
@@ -139,6 +142,8 @@ export const loadEnv = (
     replicateSessionId: source.REPLICATE_SESSION_ID || null,
     typesafeApiKey: required(source, "TYPESAFE_API_KEY"),
     typesafeInputPricePerMillionUsd: source.TYPESAFE_INPUT_PRICE_PER_MILLION_USD || "0.042",
+    cloudflareAccountId: required(source, "CLOUDFLARE_ACCOUNT_ID"),
+    cloudflareApiToken: required(source, "CLOUDFLARE_API_TOKEN"),
     allowedImageModels: list(source.ALLOWED_IMAGE_MODELS),
     reservationFallbackOutputTokens: integer(
       source,

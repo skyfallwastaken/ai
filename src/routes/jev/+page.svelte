@@ -81,6 +81,10 @@
       <p>
         Because the answers are drawn from a schema you define, Jev cannot invent an option that does not exist or return something your code cannot handle. Every answer carries a probability, so your software can act when confidence is high and hand off to a person when it is not.
       </p>
+      <p>
+        The same endpoint also serves Cloudflare's open-source <strong>Clef</strong> models through Workers AI: <code class="font-mono text-xs">clef</code> for the most accurate decisions and <code class="font-mono text-xs">clef-flash</code> when latency matters most. Set <code class="font-mono text-xs">model</code> to pick one. Clef also accepts up to four images in an <code class="font-mono text-xs">images</code> field.
+        <a href="https://developers.cloudflare.com/workers-ai/models/clef/" target="_blank" rel="noopener" class="underline underline-offset-2">Clef docs</a>
+      </p>
     </div>
   </section>
 
@@ -135,15 +139,20 @@
         <dd class="mt-1 font-mono text-sm">POST /systemone · GET /models</dd>
       </div>
       <div>
-        <dt class="text-muted-foreground text-xs">Model</dt>
-        <dd class="mt-1 font-mono text-sm">jev-latest</dd>
+        <dt class="text-muted-foreground text-xs">Models</dt>
+        <dd class="mt-1 font-mono text-sm">jev-latest · {Object.keys(data.clefPrices).join(" · ")}</dd>
       </div>
       <div>
         <dt class="text-muted-foreground text-xs">Pricing</dt>
         <dd class="mt-1 text-sm tabular-nums">
-          ${data.inputPricePerMillionUsd} per 1M input tokens
-          <span class="text-muted-foreground">· output free</span>
+          ${data.inputPricePerMillionUsd} per 1M input tokens <span class="text-muted-foreground">(Jev)</span>
         </dd>
+        {#each Object.entries(data.clefPrices) as [model, price] (model)}
+          <dd class="text-sm tabular-nums">
+            ${price} per 1M input tokens <span class="text-muted-foreground">({model})</span>
+          </dd>
+        {/each}
+        <dd class="text-muted-foreground text-sm">Output is free</dd>
         <dd class="text-muted-foreground mt-0.5 text-xs">Counts against your daily allowance</dd>
       </div>
       <div class="sm:col-span-2">
