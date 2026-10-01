@@ -17,6 +17,12 @@
 
   const cell = "px-4 py-3 text-sm";
 
+  const explainer = [
+    { title: "Send a state", body: "The thing to judge: a support message, a JSON record, a chat log. Clef can also take images." },
+    { title: "Ask questions", body: "Yes/no, pick-one, or rate-on-a-scale, each with the options you allow." },
+    { title: "Get probabilities", body: "A typed answer per question with a probability for each option. Act when it's confident; hand off to a person when it isn't." },
+  ];
+
   const models = $derived([
     { id: "jev-latest", by: "TypeSafe", notes: "Text only", price: data.inputPricePerMillionUsd },
     { id: "clef", by: "Cloudflare", notes: "Most accurate; also reads images", price: data.clefPrices.clef },
@@ -48,6 +54,22 @@
       </Button>
     {/snippet}
   </PageHeader>
+
+  <section class="mt-10" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="mb-4 text-sm font-medium">How it works</h2>
+    <ol role="list" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {#each explainer as step, index (step.title)}
+        <li class="bg-card rounded-lg border p-4">
+          <p class="text-muted-foreground text-xs tabular-nums">{index + 1}</p>
+          <p class="mt-1 text-sm font-medium">{step.title}</p>
+          <p class="text-muted-foreground mt-1 text-sm text-pretty">{step.body}</p>
+        </li>
+      {/each}
+    </ol>
+    <p class="text-muted-foreground mt-3 text-sm text-pretty">
+      Unlike a chat model, it never writes text, so there's nothing to parse and it can't answer outside your options. It answers every question at once, in milliseconds.
+    </p>
+  </section>
 
   <section class="mt-10" aria-labelledby="models-heading">
     <h2 id="models-heading" class="mb-4 text-sm font-medium">Models</h2>
